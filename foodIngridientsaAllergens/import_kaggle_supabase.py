@@ -1,9 +1,10 @@
 import pandas as pd
 from supabase import create_client, Client
 import math
+from config import SUPABASE_URL, SUPABASE_KEY
 
-URL = "https://dhtnzxpjzuefuammnerb.supabase.co"
-KEY = "process.env.SUPABASE_KEY"
+URL = SUPABASE_URL
+KEY = SUPABASE_KEY
 CSV_FILE = "food_ingredients_and_allergens.csv"
 
 supabase: Client = create_client(URL, KEY)
