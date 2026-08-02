@@ -11,6 +11,7 @@ const loaderOverlay = document.getElementById('loaderOverlay');
 
 let mediaStream = null;
 let selectedImageFile = null;
+let lastImageData = null;
 
 async function startCamera() {
   try {
@@ -19,6 +20,7 @@ async function startCamera() {
     cameraStatus.textContent = 'Kamera aktif, siap mendeteksi.';
     startCameraBtn.disabled = true;
     stopCameraBtn.disabled = false;
+    selectedImageFile = null;
   } catch (error) {
     cameraStatus.textContent = 'Gagal mengaktifkan kamera. Izinkan akses kamera di browser.';
     console.error('Camera error:', error);
@@ -43,13 +45,45 @@ function updateResult(content) {
 }
 
 function createResultCard(data) {
+  const metrics = data.metrics ? `
+      <p><strong>Blur Score:</strong> ${data.metrics.blur.toFixed(1)}</p>
+      <p><strong>Exposure:</strong> mean=${data.metrics.exposure.mean.toFixed(1)}, over=${(data.metrics.exposure.overExpPct * 100).toFixed(1)}%, under=${(data.metrics.exposure.underExpPct * 100).toFixed(1)}%</p>
+      <p><strong>Glare:</strong> ${(data.metrics.glare.glarePct * 100).toFixed(1)}%</p>
+    ` : '';
+
+  const suggestions = Array.isArray(data.suggestions) && data.suggestions.length > 0
+    ? `<p><strong>Saran:</strong> ${data.suggestions.join(' ')}</p>`
+    : '';
+
+  const inputPreview = lastImageData ? `
+      <div class="result-image-block">
+        <p><strong>Input Asli:</strong></p>
+        <img src="${lastImageData}" alt="Preview input image" />
+      </div>
+    ` : '';
+
+  const processedPreview = data.processedImage ? `
+      <div class="result-image-block">
+        <p><strong>Hasil Preprocessing:</strong></p>
+        <img src="${data.processedImage}" alt="Preview processed image" />
+      </div>
+    ` : '';
+
+  const imageSection = data.processedImage ? `
+      <div class="result-image-compare">
+        ${inputPreview}
+        ${processedPreview}
+      </div>
+    ` : inputPreview;
+
   return `
+    ${imageSection}
     <div class="result-summary">
       <p><strong>Input:</strong> ${data.inputType}</p>
       <p><strong>Status:</strong> ${data.status}</p>
-      <p><strong>Alergen terdeteksi:</strong> ${Array.isArray(data.allergens) ? data.allergens.join(', ') : data.allergens}</p>
-      <p><strong>Penyebab:</strong> ${data.cause}</p>
-      ${data.recommendation ? `<p><strong>Rekomendasi:</strong> ${data.recommendation}</p>` : ''}
+      ${data.message ? `<p><strong>Pesan:</strong> ${data.message}</p>` : ''}
+      ${metrics}
+      ${suggestions}
     </div>
   `;
 }
@@ -58,50 +92,88 @@ function setLoading(isLoading) {
   if (isLoading) {
     detectBtn.disabled = true;
     startCameraBtn.disabled = true;
+    imageInput.disabled = true;
     loaderOverlay.classList.remove('hidden');
     detectBtn.textContent = 'Memproses...';
   } else {
     detectBtn.disabled = false;
     startCameraBtn.disabled = false;
+    imageInput.disabled = false;
     loaderOverlay.classList.add('hidden');
     detectBtn.textContent = 'Mulai Deteksi';
   }
 }
 
-async function detectAllergen(inputType) {
+function getDataURLFromVideo() {
+  const canvas = document.createElement('canvas');
+  canvas.width = videoPreview.videoWidth || 640;
+  canvas.height = videoPreview.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendToAnalyze(imageData, inputType) {
   setLoading(true);
+  lastImageData = imageData;
 
   try {
-    const response = await fetch('/api/detect', {
+    const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ inputType })
+      body: JSON.stringify({ imageData, inputType })
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+      throw new Error(data.message || `HTTP error ${response.status}`);
     }
 
-    const data = await response.json();
     updateResult(createResultCard(data));
   } catch (error) {
-    updateResult(`<p class="result-empty">Terjadi kesalahan saat memproses deteksi: ${error.message}</p>`);
-    console.error('Detection error:', error);
+    updateResult(`<p class="result-empty">Terjadi kesalahan saat memproses analisis: ${error.message}</p>`);
+    console.error('Analyze error:', error);
   } finally {
     setLoading(false);
   }
 }
 
-hiddenUpload.addEventListener('change', (event) => {
+async function analyzeCurrentFrame() {
+  if (!mediaStream) {
+    updateResult('<p class="result-empty">Aktifkan kamera terlebih dahulu sebelum mendeteksi.</p>');
+    return;
+  }
+
+  const imageData = getDataURLFromVideo();
+  cameraStatus.textContent = 'Menganalisis frame kamera...';
+  await sendToAnalyze(imageData, 'Kamera Realtime');
+}
+
+async function analyzeUploadedImage(file) {
+  const imageData = await fileToDataURL(file);
+  cameraStatus.textContent = 'Menganalisis gambar unggahan...';
+  await sendToAnalyze(imageData, 'Foto Unggahan');
+}
+
+hiddenUpload.addEventListener('change', async (event) => {
   selectedImageFile = event.target.files[0] || null;
   if (!selectedImageFile) {
     return;
   }
 
-  cameraStatus.textContent = 'Gambar terunggah, memproses...';
-  detectAllergen('Foto Unggahan');
+  cameraStatus.textContent = 'Gambar terunggah, siap dianalisis.';
+  await analyzeUploadedImage(selectedImageFile);
 });
 
 imageInput.addEventListener('click', (event) => {
@@ -112,13 +184,16 @@ imageInput.addEventListener('click', (event) => {
 startCameraBtn.addEventListener('click', startCamera);
 stopCameraBtn.addEventListener('click', stopCamera);
 
-detectBtn.addEventListener('click', () => {
-  const inputType = mediaStream ? 'Kamera Realtime' : selectedImageFile ? 'Foto Unggahan' : null;
-
-  if (!inputType) {
-    updateResult('<p class="result-empty">Pilih foto atau aktifkan kamera terlebih dahulu.</p>');
+detectBtn.addEventListener('click', async () => {
+  if (mediaStream) {
+    await analyzeCurrentFrame();
     return;
   }
 
-  detectAllergen(inputType);
+  if (selectedImageFile) {
+    await analyzeUploadedImage(selectedImageFile);
+    return;
+  }
+
+  updateResult('<p class="result-empty">Pilih foto atau aktifkan kamera terlebih dahulu.</p>');
 });

@@ -1,6 +1,8 @@
+import base64
 import os
 from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
+from comvis import analyze_image_from_base64
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'frontend'))
@@ -16,19 +18,33 @@ def index():
 def static_files(path):
     return send_from_directory(FRONTEND_DIR, path)
 
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    payload = request.get_json(silent=True) or {}
+    image_data = payload.get('imageData')
+    input_type = payload.get('inputType', 'Tidak diketahui')
+
+    if not image_data:
+        return jsonify({
+            'status': 'error',
+            'message': 'Tidak ada data gambar yang dikirim.',
+            'inputType': input_type
+        }), 400
+
+    try:
+        analysis = analyze_image_from_base64(image_data)
+        analysis['inputType'] = input_type
+        return jsonify(analysis)
+    except ValueError as error:
+        return jsonify({
+            'status': 'error',
+            'message': str(error),
+            'inputType': input_type
+        }), 400
+
 @app.route('/api/detect', methods=['POST'])
 def detect():
-    payload = request.get_json(silent=True) or {}
-    input_type = payload.get('inputType', 'Tidak diketahui')
-    response = {
-        'inputType': input_type,
-        'status': 'Selesai',
-        'allergens': ['Susu', 'Kacang', 'Gluten'],
-        'cause': 'Terdeteksi istilah "casein" dan "whey protein" pada komposisi.',
-        'recommendation': 'Periksa daftar bahan dan hindari produk ini jika memiliki alergi terhadap susu atau kacang.',
-        'detectedAt': 'backend'
-    }
-    return jsonify(response)
+    return analyze()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
