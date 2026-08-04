@@ -436,3 +436,65 @@ input {
     width: 100%;
   }
 }
+
+.process-section,
+.log-section {
+  margin-top: 24px;
+}
+
+.process-section h3,
+.log-section h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  color: #0F172A;
+}
+
+.process-section ol {
+  padding-left: 20px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.process-section li {
+  margin-bottom: 10px;
+}
+
+.log-list {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 14px;
+  background: #F8FAFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+}
+
+.log-item {
+  font-size: 13px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid #E5E7EB;
+  word-break: break-word;
+}
+
+.result-log-panel {
+  padding: 20px 24px 24px;
+  border-top: 1px solid #E5E5EA;
+  background: #FAFBFF;
+}
+
+.result-metrics {
+  margin-top: 16px;
+  color: #334155;
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 860px) {
+  .result-log-panel {
+    padding: 18px 18px 22px;
+  }
+}

@@ -142,20 +142,47 @@ export default function App() {
         {result ? (
           <div className="result-card">
             <div className="result-card-image">
-              <img src={result.resultImageUrl || image} alt="Hasil analisis" />
+              <img src={result.processedImage || image} alt="Hasil analisis" />
               <div className="result-card-badge">Hasil</div>
             </div>
             <div className="result-card-body">
               <div className="result-card-header">
                 <span className="result-card-style">Ringkasan</span>
-                <span className="result-card-score">{result.status === 'success' ? 'Sukses' : 'Error'}</span>
+                <span className="result-card-score">{result.status === 'retry' ? 'Ulangi' : result.status === 'processed' ? 'Perlu Perhatian' : 'Siap'}</span>
               </div>
               <div className="result-card-content">
                 <p><strong>Input:</strong> {result.inputType}</p>
-                <p><strong>Pesan:</strong> {result.reasoning || result.message}</p>
-                {result.predictions && (
-                  <p><strong>Prediksi:</strong> {result.predictions.join(', ')}</p>
+                <p><strong>Status:</strong> {result.status}</p>
+                <p><strong>Pesan:</strong> {result.message}</p>
+                {result.suggestions?.length > 0 && (
+                  <p><strong>Saran:</strong> {result.suggestions.join(' ')}</p>
                 )}
+                {result.metrics && (
+                  <div className="result-metrics">
+                    <p><strong>Blur Score:</strong> {result.metrics.blur.toFixed(1)}</p>
+                    <p><strong>Exposure:</strong> mean={result.metrics.exposure.mean.toFixed(1)}, over={(result.metrics.exposure.overExpPct * 100).toFixed(1)}%, under={(result.metrics.exposure.underExpPct * 100).toFixed(1)}%</p>
+                    <p><strong>Glare:</strong> {(result.metrics.glare.glarePct * 100).toFixed(1)}%</p>
+                    <p><strong>Contrast:</strong> {result.metrics.contrast.toFixed(1)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="result-log-panel">
+              <div className="process-section">
+                <h3>Proses COMVIS</h3>
+                <ol>
+                  {result.processSteps?.map((step, index) => (
+                    <li key={index}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+              <div className="log-section">
+                <h3>Log COMVIS</h3>
+                <div className="log-list">
+                  {result.logs?.map((log, index) => (
+                    <div key={index} className="log-item">{log}</div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
