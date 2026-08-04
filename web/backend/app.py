@@ -6,17 +6,24 @@ from comvis import analyze_image_from_base64
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'frontend'))
+DIST_DIR = os.path.join(FRONTEND_DIR, 'dist')
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 CORS(app)
 
 @app.route('/', methods=['GET'])
 def index():
+    if os.path.exists(os.path.join(DIST_DIR, 'index.html')):
+        return send_from_directory(DIST_DIR, 'index.html')
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
 @app.route('/<path:path>', methods=['GET'])
 def static_files(path):
-    return send_from_directory(FRONTEND_DIR, path)
+    if os.path.exists(os.path.join(DIST_DIR, path)):
+        return send_from_directory(DIST_DIR, path)
+    if os.path.exists(os.path.join(FRONTEND_DIR, path)):
+        return send_from_directory(FRONTEND_DIR, path)
+    return index()
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():

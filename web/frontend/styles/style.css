@@ -23,15 +23,15 @@ body {
 
 .topbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 16px;
   margin-bottom: 28px;
-  padding: 22px 26px;
-  background: rgba(255, 255, 255, 0.88);
+  padding: 20px 24px;
+  background: #ffffff;
   border-radius: 30px;
-  box-shadow: 0 24px 70px rgba(35, 41, 55, 0.08);
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .brand {
@@ -57,6 +57,11 @@ body {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 800;
+  color: #6b7280;
+}
+
+.brand-label-muted {
+  color: #6b7280;
 }
 
 .brand-subtitle {
@@ -65,14 +70,6 @@ body {
   font-size: 0.95rem;
 }
 
-.status-badge {
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: rgba(10, 132, 255, 0.13);
-  color: #0a84ff;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
 
 .content-grid {
   display: grid;
@@ -91,11 +88,134 @@ body {
   grid-template-columns: 1.2fr 0.9fr;
   gap: 28px;
   align-items: center;
+transition: grid-template-columns 0.35s ease;
+}
+
+/* result-mode: when a result is shown we shrink the left column (Alergio title/brand)
+ so the right column can show image + reasoning. This keeps an iPhone-like proportion. */
+.hero.result-mode {
+grid-template-columns: 180px 1fr; /* smaller left column for compact branding */
+column-gap: 28px;
 }
 
 .hero-copy {
-  display: grid;
-  gap: 22px;
+display: grid;
+gap: 22px;
+transition: transform 0.35s ease, opacity 0.35s ease, font-size 0.35s ease;
+}
+
+/* small top-left Alergio when result is active */
+.hero.result-mode .hero-copy {
+align-items: start;
+}
+
+.hero-copy.active-result {
+transform: translateY(-6px);
+}
+
+.hero-card-title {
+transition: color 0.35s ease, transform 0.35s ease, font-size 0.35s ease;
+}
+
+/* shrink title and make it muted when result is active */
+.hero.result-mode .hero-card-title {
+font-size: 0.95rem;
+color: #6b7280;
+transform: translateY(-8px);
+opacity: 0.95;
+}
+
+/* reduce brand size slightly in result-mode */
+.hero.result-mode .brand-mark {
+width: 36px;
+height: 36px;
+border-radius: 10px;
+font-size: 0.9rem;
+}
+
+.hero.result-mode .brand-label {
+font-size: 0.85rem;
+color: #6b7280;
+}
+
+/* ensure hero-result body lays out image + reasoning horizontally and responsively */
+.hero.result-mode .hero-result-body {
+display: grid;
+grid-template-columns: 1fr 1.6fr; /* left small column for preview, right larger for reasoning */
+gap: 20px;
+align-items: start;
+}
+
+/* Left column (in result-mode) should stack brand title then camera/upload box */
+.hero.result-mode .hero-copy {
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+gap: 12px;
+}
+
+.hero.result-mode .camera-card {
+width: 100%;
+min-height: 140px; /* compact preview box */
+border-radius: 18px;
+padding: 8px;
+background: linear-gradient(180deg, #ffffff, #fbfcff);
+border: 1px solid rgba(15,23,42,0.04);
+box-shadow: 0 10px 30px rgba(15,23,42,0.04);
+overflow: hidden;
+}
+
+.hero.result-mode .camera-card video,
+.hero.result-mode .camera-card img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+border-radius: 12px;
+}
+
+/* ensure the upload button sits nicely inside the small preview */
+.hero.result-mode .upload-overlay-btn {
+bottom: 10px;
+right: 10px;
+width: 46px;
+height: 46px;
+}
+
+/* subtle animation for title shrink */
+@keyframes titleShrink {
+from { transform: translateY(0) scale(1); opacity: 1; }
+to { transform: translateY(-8px) scale(0.98); opacity: 0.95; }
+}
+
+.hero.result-mode .hero-card-title {
+animation: titleShrink 300ms ease forwards;
+}
+
+/* Right side result area: image preview and reasoning */
+.hero.result-mode .hero-result {
+padding: 18px;
+}
+
+.hero-result-image img {
+border-radius: 12px;
+box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+}
+
+/* Responsive fallback: for narrow screens, stack vertically */
+@media (max-width: 820px) {
+.hero.result-mode {
+  grid-template-columns: 1fr; /* stack */
+}
+.hero.result-mode .hero-result-body {
+  grid-template-columns: 1fr;
+}
+.hero.result-mode .camera-card {
+  min-height: 200px;
+}
+}
+
+.hero-card-title.active-title {
+  color: #0a84ff;
 }
 
 .eyebrow {
@@ -136,7 +256,138 @@ body {
 
 .hero-card {
   display: grid;
-  gap: 18px;
+  gap: 22px;
+}
+
+.hero-result {
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 32px;
+  border: 1px solid rgba(10, 132, 255, 0.16);
+  box-shadow: 0 32px 90px rgba(10, 132, 255, 0.08);
+  padding: 28px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.hero-result.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-result.hidden {
+  display: none !important;
+}
+
+/* Ensure hero and its children layer properly so left title isn't overlapped by the result card */
+.hero {
+  position: relative; /* allow z-index stacking */
+}
+
+/* left column (brand/title) should sit above result visually */
+.hero .hero-copy {
+  position: relative;
+  z-index: 50;
+}
+
+/* result card sits in second column and below the left title (lower z-index) */
+.hero .hero-result {
+  position: relative;
+  z-index: 10;
+}
+
+/* Force result card to occupy the second grid column in result-mode to avoid overlap */
+.hero.result-mode .hero-result {
+  grid-column: 2 / 3;
+}
+
+/* keep result card from expanding into left column */
+.hero.result-mode {
+  align-items: start;
+}
+
+.hero-result-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 22px;
+}
+
+.hero-result-step {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0a84ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero-result-state {
+  color: #4b5563;
+  max-width: 100%;
+}
+
+.hero-result-body {
+  display: grid;
+  gap: 20px;
+}
+
+.hero-result-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  min-height: 260px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(250,250,252,0.9), rgba(245,246,250,0.9));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.hero-result-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-result-details {
+  color: #1f2937;
+  line-height: 1.75;
+}
+
+.hero-result-content {
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(10, 132, 255, 0.06);
+  border: 1px solid rgba(10, 132, 255, 0.14);
+}
+
+.hero-result-info p {
+  margin: 10px 0;
+}
+
+@media (min-width: 900px) {
+  .hero-result-body {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .hero-result-image {
+    min-height: 320px;
+  }
+}
+
+.hero-result-content {
+  margin-top: 16px;
+}
+
+.hero-result-info p {
+  margin: 8px 0;
 }
 
 .hero-card-header {
@@ -153,6 +404,8 @@ body {
 }
 
 .hero-card-badge {
+  /* badge removed per UX request */
+  display: none !important;
   padding: 8px 16px;
   border-radius: 999px;
   background: rgba(10, 132, 255, 0.12);
@@ -229,6 +482,29 @@ body {
   color: #101010;
   text-align: center;
   font-weight: 700;
+}
+
+.snapshot-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 30px;
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s ease;
+  visibility: hidden;
+}
+
+.snapshot-preview.visible {
+  opacity: 1;
+  transform: scale(1);
+  visibility: visible;
+}
+
+.snapshot-preview.hidden {
+  display: block !important;
 }
 
 .hidden {
@@ -325,13 +601,13 @@ body {
 
 .button-action {
   width: 100%;
-  background: #32d74b;
+  background: #0a84ff;
   color: white;
-  box-shadow: 0 14px 36px rgba(50, 215, 75, 0.22);
+  box-shadow: 0 14px 36px rgba(10, 132, 255, 0.22);
 }
 
 .button-action:hover {
-  background: #28bc3e;
+  background: #0060d9;
 }
 
 .helper-text,

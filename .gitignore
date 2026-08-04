@@ -42,6 +42,14 @@ dist/
 # Node modules (if using JS frontend)
 node_modules/
 
+# Frontend build artifacts
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/.vite/
+web/frontend/npm-debug.log*
+web/frontend/yarn-debug.log*
+web/frontend/yarn-error.log*
+
 # Coverage reports
 htmlcov/
 .coverage

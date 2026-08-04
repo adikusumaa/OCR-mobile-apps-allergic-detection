@@ -1,88 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Alergio!</title>
-    <link rel="stylesheet" href="styles/style.css" />
+    <title>Alergio</title>
   </head>
   <body>
-    <div class="app-shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-mark">AG</div>
-          <div>
-            <p class="brand-label">Alergio!</p>
-          </div>
-        </div>
-        <div class="status-badge">Demo Web</div>
-      </header>
-
-      <section class="hero panel panel-primary">
-        <div class="hero-copy">
-          <p class="eyebrow">Alergen Detection</p>
-          <h1 class="hero-title">Alergio!</h1>
-          <p class="hero-subtitle">Scan label makanan dengan kamera atau unggah foto kemasan untuk mendeteksi alergen dan penyebabnya dalam beberapa detik.</p>
-          <div class="hero-actions">
-            <button id="startCameraBtn" class="button button-primary">Aktifkan Kamera</button>
-            <button id="stopCameraBtn" class="button button-secondary" disabled>Hentikan Kamera</button>
-            <button id="imageInput" class="button button-action">Unggah Foto</button>
-            <button id="detectBtn" class="button button-primary">Mulai Deteksi</button>
-          </div>
-        </div>
-
-        <div class="hero-card">
-          <div class="hero-card-header">
-            <span class="hero-card-title">Live Preview</span>
-            <span class="hero-card-badge">Realtime</span>
-          </div>
-          <div class="camera-card">
-            <video id="videoPreview" autoplay muted playsinline></video>
-            <div class="camera-overlay">
-              <span id="cameraStatus">Menunggu kamera...</span>
-            </div>
-            <div id="loaderOverlay" class="loader-overlay hidden">
-              <div class="loader-spinner"></div>
-              <span>Memproses deteksi...</span>
-            </div>
-            <label for="hiddenUpload" class="upload-overlay-btn" title="Upload Gambar">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 3V15" stroke="#0A84FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 7L12 3L8 7" stroke="#0A84FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M5 19H19" stroke="#0A84FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </label>
-            <input id="hiddenUpload" class="hidden" type="file" accept="image/*" />
-          </div>
-        </div>
-      </section>
-
-      <main class="content-grid">
-        <section id="resultSection" class="panel panel-secondary hidden">
-          <div class="panel-header">
-            <h2>Hasil Deteksi</h2>
-            <p>Hasil akan muncul setelah proses deteksi selesai.</p>
-          </div>
-          <div class="result-card fade-card" id="resultCard">
-            <p class="result-empty">Belum ada data. Klik <strong>Mulai Deteksi</strong> atau unggah gambar.</p>
-          </div>
-        </section>
-
-        <section class="panel panel-info">
-          <div class="panel-header">
-            <h2>Mengapa Alergio!</h2>
-          </div>
-          <ul class="feature-list">
-            <li>Deteksi multi-bahasa termasuk Latin, Mandarin, Jepang, dan Korea.</li>
-            <li>Optimasi visual untuk OCR dan hasil lebih akurat.</li>
-            <li>Jalankan offline dan aman di perangkat Anda.</li>
-            <li>Desain antarmuka bergaya iPhone yang elegan.</li>
-            <li>Ringkas dan mudah dipakai untuk demo cepat.</li>
-          </ul>
-        </section>
-      </main>
-    </div>
-
-    <script src="utils/script.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

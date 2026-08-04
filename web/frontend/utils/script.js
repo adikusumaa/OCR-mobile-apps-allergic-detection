@@ -1,47 +1,116 @@
 const videoPreview = document.getElementById('videoPreview');
-const startCameraBtn = document.getElementById('startCameraBtn');
-const stopCameraBtn = document.getElementById('stopCameraBtn');
-const detectBtn = document.getElementById('detectBtn');
+const snapshotPreview = document.getElementById('snapshotPreview');
+const cameraCard = document.querySelector('.camera-card');
 const imageInput = document.getElementById('imageInput');
 const hiddenUpload = document.getElementById('hiddenUpload');
 const cameraStatus = document.getElementById('cameraStatus');
+const heroResult = document.getElementById('heroResult');
+const heroResultStep = document.getElementById('heroResultStep');
+const heroResultState = document.getElementById('heroResultState');
+const heroResultImage = document.getElementById('heroResultImage');
+const heroResultText = document.getElementById('heroResultText');
+const heroResultContent = document.getElementById('heroResultContent');
+const heroCardTitle = document.querySelector('.hero-card-title');
 const resultCard = document.getElementById('resultCard');
 const resultSection = document.getElementById('resultSection');
 const loaderOverlay = document.getElementById('loaderOverlay');
+const heroCopy = document.querySelector('.hero-copy');
+const heroBadge = document.querySelector('.hero-card-badge');
 
 let mediaStream = null;
 let selectedImageFile = null;
 let lastImageData = null;
+let autoAnalyzeInterval = null;
+let isAnalyzing = false;
+let livePreviewTimeout = null;
 
 async function startCamera() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
     videoPreview.srcObject = mediaStream;
-    cameraStatus.textContent = 'Kamera aktif, siap mendeteksi.';
-    startCameraBtn.disabled = true;
-    stopCameraBtn.disabled = false;
+    cameraStatus.textContent = 'Live stream kamera dimulai. Menunggu proses...';
     selectedImageFile = null;
+    startAutoAnalyze();
   } catch (error) {
     cameraStatus.textContent = 'Gagal mengaktifkan kamera. Izinkan akses kamera di browser.';
     console.error('Camera error:', error);
   }
 }
 
-function stopCamera() {
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop());
-    mediaStream = null;
-    videoPreview.srcObject = null;
-    cameraStatus.textContent = 'Kamera dihentikan.';
-    startCameraBtn.disabled = false;
-    stopCameraBtn.disabled = true;
+function startAutoAnalyze() {
+  if (autoAnalyzeInterval) return;
+  autoAnalyzeInterval = setInterval(async () => {
+    if (!mediaStream || isAnalyzing) return;
+    await analyzeCurrentFrame();
+  }, 3000);
+}
+
+function updateResult(data) {
+  const answerText = data.message || data.status || 'Hasil tersedia.';
+  heroResultStep.textContent = 'Tahap: Selesai';
+  heroResultState.textContent = 'COMVIS dan OCR selesai. Menampilkan output awal.';
+  heroResultImage.src = data.processedImage || lastImageData || '';
+  heroResultText.innerHTML = answerText;
+  heroResultContent.innerHTML = renderHeroResultContent(data);
+
+  heroResult.classList.remove('hidden');
+  heroResult.classList.add('visible');
+  resultSection.classList.add('hidden');
+  heroBadge.textContent = 'Hasil Deteksi';
+  heroCardTitle.textContent = 'Hasil Deteksi';
+  heroCardTitle.classList.add('active-title');
+  heroCopy.classList.add('active-result');
+
+  // set hero to result-mode to change layout/proportions
+  const heroEl = document.querySelector('.hero');
+  if (heroEl) heroEl.classList.add('result-mode');
+}
+
+function showError(message) {
+  heroResultStep.textContent = 'Tahap: Error';
+  heroResultState.textContent = 'Terjadi kesalahan saat memproses pipeline.';
+  heroResultImage.src = lastImageData || '';
+  heroResultText.innerHTML = message;
+  heroResultContent.innerHTML = '';
+
+  heroResult.classList.remove('hidden');
+  heroResult.classList.add('visible');
+  resultSection.classList.add('hidden');
+  heroBadge.textContent = 'Hasil Deteksi';
+  heroCardTitle.textContent = 'Hasil Deteksi';
+  heroCardTitle.classList.add('active-title');
+  heroCopy.classList.add('active-result');
+
+  // layout change to result-mode
+  const heroEl = document.querySelector('.hero');
+  if (heroEl) heroEl.classList.add('result-mode');
+}
+
+function showPreviewImage(imageSrc) {
+  if (!snapshotPreview) {
+    return;
+  }
+
+  if (imageSrc) {
+    snapshotPreview.src = imageSrc;
+    snapshotPreview.classList.add('visible');
+    snapshotPreview.classList.remove('hidden');
+    videoPreview.classList.add('hidden');
+  } else {
+    snapshotPreview.classList.remove('visible');
+    snapshotPreview.classList.add('hidden');
+    videoPreview.classList.remove('hidden');
   }
 }
 
-function updateResult(content) {
-  resultCard.innerHTML = content;
-  resultSection.classList.remove('hidden');
-  resultCard.classList.add('visible');
+function resetPreviewToVideo(delay = 1200) {
+  if (livePreviewTimeout) {
+    clearTimeout(livePreviewTimeout);
+  }
+
+  livePreviewTimeout = setTimeout(() => {
+    showPreviewImage(null);
+  }, delay);
 }
 
 function createResultCard(data) {
@@ -89,19 +158,55 @@ function createResultCard(data) {
 }
 
 function setLoading(isLoading) {
+  imageInput.disabled = isLoading;
+  hiddenUpload.disabled = isLoading;
   if (isLoading) {
-    detectBtn.disabled = true;
-    startCameraBtn.disabled = true;
-    imageInput.disabled = true;
     loaderOverlay.classList.remove('hidden');
-    detectBtn.textContent = 'Memproses...';
   } else {
-    detectBtn.disabled = false;
-    startCameraBtn.disabled = false;
-    imageInput.disabled = false;
     loaderOverlay.classList.add('hidden');
-    detectBtn.textContent = 'Mulai Deteksi';
   }
+}
+
+function renderHeroResultContent(data) {
+  const metrics = data.metrics ? `
+      <p><strong>Blur Score:</strong> ${data.metrics.blur.toFixed(1)}</p>
+      <p><strong>Exposure:</strong> mean=${data.metrics.exposure.mean.toFixed(1)}, over=${(data.metrics.exposure.overExpPct * 100).toFixed(1)}%, under=${(data.metrics.exposure.underExpPct * 100).toFixed(1)}%</p>
+      <p><strong>Glare:</strong> ${(data.metrics.glare.glarePct * 100).toFixed(1)}%</p>
+    ` : '';
+
+  const suggestions = Array.isArray(data.suggestions) && data.suggestions.length > 0
+    ? `<p><strong>Saran:</strong> ${data.suggestions.join(' ')}</p>`
+    : '';
+
+  return `
+    <div class="hero-result-info">
+      <p><strong>Input:</strong> ${data.inputType}</p>
+      <p><strong>Status:</strong> ${data.status}</p>
+      ${data.message ? `<p><strong>Pesan:</strong> ${data.message}</p>` : ''}
+      ${metrics}
+      ${suggestions}
+    </div>
+  `;
+}
+
+function updateProcessingStage(stage, stateText, imageSrc = null) {
+  heroResultStep.textContent = `Tahap: ${stage}`;
+  heroResultState.textContent = stateText;
+  heroResultText.innerHTML = 'Sedang dalam proses -- menampilkan ringkasan saat selesai.';
+  if (imageSrc) {
+    heroResultImage.src = imageSrc;
+  }
+  heroResultContent.innerHTML = '';
+  heroResult.classList.remove('hidden');
+  heroResult.classList.add('visible');
+  heroBadge.textContent = 'Hasil Deteksi';
+  heroCardTitle.textContent = 'Hasil Deteksi';
+  heroCardTitle.classList.add('active-title');
+  heroCopy.classList.add('active-result');
+
+  // switch hero to result-mode immediately so layout becomes horizontal
+  const heroEl = document.querySelector('.hero');
+  if (heroEl) heroEl.classList.add('result-mode');
 }
 
 function getDataURLFromVideo() {
@@ -127,7 +232,8 @@ async function sendToAnalyze(imageData, inputType) {
   lastImageData = imageData;
 
   try {
-    const response = await fetch('/api/analyze', {
+    updateProcessingStage('OCR', 'Sedang menjalankan OCR dan pemrosesan teks...');
+  const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -140,9 +246,9 @@ async function sendToAnalyze(imageData, inputType) {
       throw new Error(data.message || `HTTP error ${response.status}`);
     }
 
-    updateResult(createResultCard(data));
+    updateResult(data);
   } catch (error) {
-    updateResult(`<p class="result-empty">Terjadi kesalahan saat memproses analisis: ${error.message}</p>`);
+    showError(`Terjadi kesalahan saat memproses analisis: ${error.message}`);
     console.error('Analyze error:', error);
   } finally {
     setLoading(false);
@@ -151,19 +257,26 @@ async function sendToAnalyze(imageData, inputType) {
 
 async function analyzeCurrentFrame() {
   if (!mediaStream) {
-    updateResult('<p class="result-empty">Aktifkan kamera terlebih dahulu sebelum mendeteksi.</p>');
     return;
   }
 
+  isAnalyzing = true;
   const imageData = getDataURLFromVideo();
   cameraStatus.textContent = 'Menganalisis frame kamera...';
+  updateProcessingStage('COMVIS', 'Sedang memproses frame realtime melalui COMVIS...', imageData);
+  showPreviewImage(imageData);
+  resetPreviewToVideo(1400);
   await sendToAnalyze(imageData, 'Kamera Realtime');
+  isAnalyzing = false;
 }
 
 async function analyzeUploadedImage(file) {
   const imageData = await fileToDataURL(file);
   cameraStatus.textContent = 'Menganalisis gambar unggahan...';
+  updateProcessingStage('COMVIS', 'Sedang memproses gambar unggahan melalui COMVIS...', imageData);
+  showPreviewImage(imageData);
   await sendToAnalyze(imageData, 'Foto Unggahan');
+  resetPreviewToVideo(8000);
 }
 
 hiddenUpload.addEventListener('change', async (event) => {
@@ -172,7 +285,7 @@ hiddenUpload.addEventListener('change', async (event) => {
     return;
   }
 
-  cameraStatus.textContent = 'Gambar terunggah, siap dianalisis.';
+  cameraStatus.textContent = 'Gambar terunggah, memproses...';
   await analyzeUploadedImage(selectedImageFile);
 });
 
@@ -181,19 +294,6 @@ imageInput.addEventListener('click', (event) => {
   hiddenUpload.click();
 });
 
-startCameraBtn.addEventListener('click', startCamera);
-stopCameraBtn.addEventListener('click', stopCamera);
-
-detectBtn.addEventListener('click', async () => {
-  if (mediaStream) {
-    await analyzeCurrentFrame();
-    return;
-  }
-
-  if (selectedImageFile) {
-    await analyzeUploadedImage(selectedImageFile);
-    return;
-  }
-
-  updateResult('<p class="result-empty">Pilih foto atau aktifkan kamera terlebih dahulu.</p>');
+startCamera().catch((error) => {
+  console.error('Kesalahan saat membuka kamera otomatis:', error);
 });
